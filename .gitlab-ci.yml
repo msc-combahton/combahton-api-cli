@@ -1,0 +1,3 @@
+build:
+  script:
+    - "pyinstaller --onefile -y src/cbcli.py"
