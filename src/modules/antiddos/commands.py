@@ -4,9 +4,10 @@ import ipaddress
 import sys
 
 import logging
+logging.basicConfig()
 logger = logging.getLogger(__name__)
 
-from tools.api import ApiRequest
+from tools.api import ApiRequest # pylint: disable=import-error
 from tabulate import tabulate
 
 api = ApiRequest()
@@ -21,7 +22,7 @@ def antiddos():
 @click.argument('ipv4')
 @click.argument('toggle', type=click.BOOL)
 def fv3(ipv4, toggle):
-    """Enable/Disable flowShield v3 on the specified IPv4 address - toggle is of type boolean"""
+    """Manage flowShieldv3 on a specified IPv4 address"""
     try:
         ipaddr = str(ipaddress.ip_address(ipv4))
         request = api.request(component = "antiddos", method = "layer4", action = "routing", routing = "l4_target", target = ('fv3' if toggle else 'fv3'), ipaddr = ipaddr)
@@ -44,7 +45,9 @@ def fv3(ipv4, toggle):
 @click.argument('ipv4')
 @click.argument('type')
 def l4_routing(ipv4, type):
-    """Set the Layer 4 routing mode of the specified IPv4 - valid types are dynamic, permanent, dynamic_perm"""
+    """Set the Layer 4 routing mode of the specified IPv4
+    
+    Valid types are dynamic, permanent, dynamic_perm"""
     try:
         ipaddr = str(ipaddress.ip_address(ipv4))
         request = api.request(component = "antiddos", method = "layer4", action = "routing", routing = type, ipaddr = ipaddr)
@@ -65,7 +68,9 @@ def l4_routing(ipv4, type):
 @click.argument('ipv4')
 @click.argument('type')
 def l7_routing(ipv4, type):
-    """Set the Layer 7 routing mode of the specified IPv4 - valid types are only_on, only_off, activate, deactivate"""
+    """Set the Layer 7 routing mode of the specified IPv4
+    
+    Valid types are only_on, only_off, activate, deactivate"""
     try:
         ipaddr = str(ipaddress.ip_address(ipv4))
         request = api.request(component = "antiddos", method = "layer7", action = "routing", routing = type, ipaddr = ipaddr)
@@ -119,24 +124,90 @@ def incidents_all(raw):
 @click.argument('ipv4')
 @click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
 def status(ipv4, raw):
-    """Shows the current status of a specific ip"""
+    """Shows the current filter status of a specific ip"""
     try:
         ipaddr = str(ipaddress.ip_address(ipv4))
         request = api.request(component = "antiddos", method = "status", action = "show", ipaddr = ipaddr)
         response = json.loads(request.text)
-        if raw:
-            click.echo(response)
+        if response and 'status' in response:
+            if response['status'] == 'id_unauthenticated':
+                logger.error("Access denied: You are not allowed to modify %s" % ipaddr)
         else:
-            click.echo(tabulate(response,headers="keys"))
+            if raw:
+                click.echo(response)
+            else:
+                res = []  
+                for key,val in response.items():
+                    res.append([key, val])
+                click.echo(tabulate(res))
     except ValueError:
         logger.error("address/netmask is invalid: %s "  % click.get_os_args()[2])
+        raise
     except:
-        logger.error('Usage: antiddos incidents-ip 127.0.0.1')
+        logger.error('Usage: antiddos status 127.0.0.1')
         raise
 
+@click.command()
+@click.argument('domain')
+@click.argument('protection', default="")
+@click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
+def l7_domain_add(domain, protection, raw):
+    """Adds the DOMAIN to the layer7 filtering, optionally setting the PROTECTION.
+    
+    DOMAIN is a FQDN whose A-Record points o an IPv4-address owned by your account.
+    PROTECTION is a method like aes, captcha, button
+    """
+    try:
+        request = api.request(component = "antiddos", method = "layer7", action = "add", domain = domain, protector=protection)
+        response = json.loads(request.text)
+        if response and 'status' in response:
+            if response['status'] == 'id_unauthenticated':
+                logger.error("Access denied: You are not allowed to modify %s" % domain)
+        else:
+            if raw:
+                click.echo(response)
+            else:
+                res = []  
+                for key,val in response.items():
+                    res.append([key, val])
+                click.echo(tabulate(res))
+    except ValueError:
+        logger.error("address/netmask is invalid: %s "  % click.get_os_args()[2])
+        raise
+    except:
+        logger.error('Usage: antiddos status 127.0.0.1')
+        raise
+
+@click.group()
+def layer7():
+    """Layer 7 API methods"""
+    pass
+
+@click.group()
+def layer4():
+    """Layer 4 API methods"""
+    pass
+
+@click.group()
+def incidents():
+    """Incident Methods"""
+    pass
+
+
 antiddos.add_command(fv3)
-antiddos.add_command(l4_routing)
-antiddos.add_command(l7_routing)
-antiddos.add_command(incidents_single)
-antiddos.add_command(incidents_all)
 antiddos.add_command(status)
+
+"""Layer 4 Submodule"""
+layer4.add_command(l4_routing, name = "set-routing")
+
+"""Layer 7 Submodule"""
+layer7.add_command(l7_routing, name = "set-routing")
+layer7.add_command(l7_domain_add, name="domain-add")
+
+"""Incident Submodule"""
+incidents.add_command(incidents_single, name="single")
+incidents.add_command(incidents_all, name="all")
+
+antiddos.add_command(layer4)
+antiddos.add_command(layer7)
+antiddos.add_command(incidents)
