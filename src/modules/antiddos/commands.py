@@ -17,7 +17,7 @@ def antiddos():
     """antiddos management module"""
     pass
 
-
+#region General
 @click.command()
 @click.argument('ipv4')
 @click.argument('toggle', type=click.BOOL)
@@ -41,6 +41,41 @@ def fv3(ipv4, toggle):
         logger.error('Usage: antiddos fv3 127.0.0.1 true')
         raise
 
+
+@click.command()
+@click.argument('ipv4')
+@click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
+def status(ipv4, raw):
+    """Shows the current filter status of a specific ip"""
+    try:
+        ipaddr = str(ipaddress.ip_address(ipv4))
+        request = api.request(component = "antiddos", method = "status", action = "show", ipaddr = ipaddr)
+        response = json.loads(request.text)
+        if response and 'status' in response:
+            if response['status'] == 'id_unauthenticated':
+                logger.error("Access denied: You are not allowed to modify %s" % ipaddr)
+        else:
+            if raw:
+                click.echo(response)
+            else:
+                res = []  
+                for key,val in response.items():
+                    res.append([key, val])
+                click.echo(tabulate(res))
+    except ValueError:
+        logger.error("address/netmask is invalid: %s "  % click.get_os_args()[2])
+        raise
+    except:
+        logger.error('Usage: antiddos status 127.0.0.1')
+        raise
+#endregion
+
+#region Layer 4
+@click.group()
+def layer4():
+    """Layer 4 API methods"""
+    pass
+
 @click.command()
 @click.argument('ipv4')
 @click.argument('type')
@@ -62,7 +97,13 @@ def l4_routing(ipv4, type):
     except:
         logger.error('Usage: antiddos l4-routing 127.0.0.1 true')
         raise
+#endregion
 
+#region Layer 7
+@click.group()
+def layer7():
+    """Layer 7 API methods"""
+    pass
 
 @click.command()
 @click.argument('ipv4')
@@ -85,6 +126,100 @@ def l7_routing(ipv4, type):
     except:
         logger.error('Usage: antiddos l7-routing 127.0.0.1 true')
         raise
+
+@click.command()
+@click.argument('domain')
+@click.argument('protection', default="buttom")
+@click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
+def l7_domain_add(domain, protection, raw):
+    """Adds the DOMAIN to the layer7 filtering, optionally setting the PROTECTION.
+    
+    DOMAIN is a FQDN whose A-Record points o an IPv4-address owned by your account.
+    PROTECTION is a method like aes, captcha, button
+    """
+    try:
+        request = api.request(component = "antiddos", method = "layer7", action = "add", domain = domain, protector=protection)
+        response = json.loads(request.text)
+        if response and 'status' in response:
+            if response['status'] == 'id_unauthenticated':
+                logger.error("Access denied: You are not allowed to modify %s" % domain)
+        else:
+            if raw:
+                click.echo(response)
+            else:
+                res = []  
+                for key,val in response.items():
+                    res.append([key, val])
+                click.echo(tabulate(res))
+    except:
+        logger.error('Usage: antiddos layer7 domain-add example.tld [protector]')
+        raise
+
+@click.command()
+@click.argument('domain')
+@click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
+def l7_domain_delete(domain, raw):
+    """Removes DOMAIN from the layer7 filtering"""
+    try:
+        request = api.request(component = "antiddos", method = "layer7", action = "delete", domain = domain)
+        response = json.loads(request.text)
+        if response and 'status' in response:
+            if response['status'] == 'id_unauthenticated':
+                logger.error("Access denied: You are not allowed to modify %s" % domain)
+        else:
+            if raw:
+                click.echo(response)
+            else:
+                res = []  
+                for key,val in response.items():
+                    res.append([key, val])
+                click.echo(tabulate(res))
+    except:
+        logger.error('Usage: antiddos layer7 domain-remove example.tld')
+        raise
+
+@click.command()
+@click.argument('domain')
+@click.argument('certificate', type=click.Path("r"))
+@click.argument('privatekey', type=click.Path("r"))
+@click.argument('protection', default="button")
+@click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
+def l7_ssl_add(domain, certificate, privatekey, protection, raw):
+    """Adds an SSL certificate for DOMAIN from the layer7 filtering
+    
+    Example: antiddos layer7 ssl-add example.tld /path/to/certificate /path/to/keyfile
+    """
+    try:
+        with open(certificate) as cert:
+            with open(privatekey) as priv:
+                request = api.request(component = "antiddos", method = "layer7", action = "ssl_add", domain = domain, cert = cert.read(), key = priv.read(), protector = protection)
+                response = json.loads(request.text)
+                if response and 'status' in response:
+                    if response['status'] == 'id_unauthenticated':
+                        logger.info(response)
+                        logger.error("Access denied: You are not allowed to modify %s" % domain)
+                    elif response['status'] == 'ssl_chain_invalid':
+                        logger.error("The provided SSL chain is invalid. Please check your input.")
+                    else:
+                        logger.error(response['status'])
+                else:
+                    if raw:
+                        click.echo(response)
+                    else:
+                        res = []  
+                        for key,val in response.items():
+                            res.append([key, val])
+                        click.echo(tabulate(res))
+    except:
+        logger.error('Usage: antiddos layer7 ssl-add example.tld /path/to/certificate /path/to/keyfile [protection]')
+        raise
+#endregion
+
+#region Incidents
+@click.group()
+def incidents():
+    """Incident Methods"""
+    pass
 
 @click.command()
 @click.argument('ipv4')
@@ -119,80 +254,7 @@ def incidents_all(raw):
     except:
         logger.error('Usage: antiddos incident-all 127.0.0.1')
         raise
-
-@click.command()
-@click.argument('ipv4')
-@click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
-def status(ipv4, raw):
-    """Shows the current filter status of a specific ip"""
-    try:
-        ipaddr = str(ipaddress.ip_address(ipv4))
-        request = api.request(component = "antiddos", method = "status", action = "show", ipaddr = ipaddr)
-        response = json.loads(request.text)
-        if response and 'status' in response:
-            if response['status'] == 'id_unauthenticated':
-                logger.error("Access denied: You are not allowed to modify %s" % ipaddr)
-        else:
-            if raw:
-                click.echo(response)
-            else:
-                res = []  
-                for key,val in response.items():
-                    res.append([key, val])
-                click.echo(tabulate(res))
-    except ValueError:
-        logger.error("address/netmask is invalid: %s "  % click.get_os_args()[2])
-        raise
-    except:
-        logger.error('Usage: antiddos status 127.0.0.1')
-        raise
-
-@click.command()
-@click.argument('domain')
-@click.argument('protection', default="")
-@click.option('-r', '--raw', is_flag = True, help = "Return the raw JSON response")
-def l7_domain_add(domain, protection, raw):
-    """Adds the DOMAIN to the layer7 filtering, optionally setting the PROTECTION.
-    
-    DOMAIN is a FQDN whose A-Record points o an IPv4-address owned by your account.
-    PROTECTION is a method like aes, captcha, button
-    """
-    try:
-        request = api.request(component = "antiddos", method = "layer7", action = "add", domain = domain, protector=protection)
-        response = json.loads(request.text)
-        if response and 'status' in response:
-            if response['status'] == 'id_unauthenticated':
-                logger.error("Access denied: You are not allowed to modify %s" % domain)
-        else:
-            if raw:
-                click.echo(response)
-            else:
-                res = []  
-                for key,val in response.items():
-                    res.append([key, val])
-                click.echo(tabulate(res))
-    except ValueError:
-        logger.error("address/netmask is invalid: %s "  % click.get_os_args()[2])
-        raise
-    except:
-        logger.error('Usage: antiddos status 127.0.0.1')
-        raise
-
-@click.group()
-def layer7():
-    """Layer 7 API methods"""
-    pass
-
-@click.group()
-def layer4():
-    """Layer 4 API methods"""
-    pass
-
-@click.group()
-def incidents():
-    """Incident Methods"""
-    pass
-
+#endregion
 
 antiddos.add_command(fv3)
 antiddos.add_command(status)
@@ -203,6 +265,8 @@ layer4.add_command(l4_routing, name = "set-routing")
 """Layer 7 Submodule"""
 layer7.add_command(l7_routing, name = "set-routing")
 layer7.add_command(l7_domain_add, name="domain-add")
+layer7.add_command(l7_domain_delete, name = "domain-remove")
+layer7.add_command(l7_ssl_add, name='ssl-add')
 
 """Incident Submodule"""
 incidents.add_command(incidents_single, name="single")
