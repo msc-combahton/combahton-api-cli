@@ -1,5 +1,3 @@
-image: "python:latest"
-
 stages:
   - test
   - build
@@ -19,6 +17,7 @@ before_script:
   - source venv/bin/activate
 
 pylint:
+  image: "python:3.7-slim"
   stage: test
   before_script:
     - mkdir -p public/badges public/lint
@@ -42,6 +41,7 @@ pylint:
     when: always
 
 amd64:
+  image: "python:3.7"
   stage: build
   artifacts:
     paths:
