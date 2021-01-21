@@ -16,13 +16,11 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
+  build_linux:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Workspace
         uses: actions/checkout@v2
 
@@ -30,17 +28,24 @@ jobs:
         uses: JackMcKew/pyinstaller-action-linux@0.1.4
         with:
             output: src/dist/linux_x86_64
-
-      - name: PyInstaller Windows
-        uses: JackMcKew/pyinstaller-action-windows@v0.1.2
-        with:
-            output: src/dist/win_x86_64
       
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: cbcli-linux
           path: src/dist/linux_x86_64
+          
+  build_windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Workspace
+        uses: actions/checkout@v2
+
+      - name: PyInstaller Windows
+        uses: JackMcKew/pyinstaller-action-windows@v0.1.2
+        with:
+            output: src/dist/win_x86_64
       
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v2
