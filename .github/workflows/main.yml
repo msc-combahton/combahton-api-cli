@@ -23,8 +23,28 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Checkout Workspace
+        uses: actions/checkout@v2
 
       - name: PyInstaller Linux
         uses: JackMcKew/pyinstaller-action-linux@0.1.4
+        with:
+            output: src/dist/linux_x86_64
+
+      - name: PyInstaller Windows
+        uses: JackMcKew/pyinstaller-action-windows@v0.1.2
+        with:
+            output: src/dist/win_x86_64
+      
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: cbcli-linux
+          path: src/dist/linux_x86_64
+      
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: cbcli-winx64
+          path: src/dist/win_x86_64
 
