@@ -72,13 +72,13 @@ jobs:
           major-wording: 'breaking,break,major'
           patch-wording: 'fix,tweak'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           
       - name: Automatic Releases
         uses: marvinpinto/action-automatic-releases@v1.1.0
         with:
           # GitHub secret token
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ github.token }}
           # Should this release be marked as a draft?
           draft: true
           # Should this release be marked as a pre-release?
