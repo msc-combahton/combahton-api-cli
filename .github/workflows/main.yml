@@ -65,7 +65,7 @@ jobs:
           path: ${{ github.workspace }}/dist/
           
       - name: Automatic Releases
-        uses: marvinpinto/action-automatic-releases@v1.1.0
+        uses: marvinpinto/action-automatic-releases@latest
         with:
           # GitHub secret token
           repo_token: ${{ secrets.GITHUB_TOKEN }}
