@@ -15,9 +15,29 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  codequality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Workspace
+        uses: actions/checkout@v2
+        
+      - name: Setup Python Environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+          
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Super-Linter
+        uses: github/super-linter@v3.14.0
+        env:
+          PYTHON_PYLINT_CONFIG_FILE: ${{ github.workspace}}/.pylintrc
+          VALIDATE_PYTHON_PYLINT: true
+          
   build_linux:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     steps:
@@ -36,12 +56,32 @@ jobs:
           
       - name: PyInstaller Linux Build
         run: |
-          pyinstaller --onefile -y ${{ github.workspace }}/src/cbcli.py
-          
+          pyinstaller --onefile -y ${{ github.workspace }}/src/cbcli.py  
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: cbcli_linux_amd64
-          path: ${{ github.workspace }}//dist/
-
+          path: ${{ github.workspace }}/dist/
+          
+      - name: 'Automated Version Bump'
+        uses: digza/automatic-python-version@0.0.13
+        with:
+          tag-prefix: ''
+          minor-wording: 'feat,rebuild'
+          major-wording: 'breaking,break,major'
+          patch-wording: 'fix,tweak'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Automatic Releases
+        uses: marvinpinto/action-automatic-releases@v1.1.0
+        with:
+          # GitHub secret token
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          # Should this release be marked as a draft?
+          draft: true
+          # Should this release be marked as a pre-release?
+          prerelease: true
+          # Assets to upload to the release
+          files: ${{ github.workspace }}/dist/
