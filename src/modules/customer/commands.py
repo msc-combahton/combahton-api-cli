@@ -1,6 +1,7 @@
 import logging
 import json
 import click
+from tabulate import tabulate
 from tools.api import ApiRequest  # pylint: disable=import-error
 from tools.config import cfgfile  # pylint: disable=import-error
 
@@ -59,9 +60,9 @@ def contract_all():
     request = api.request(component="customer", method="contract", action="view_all")
     contracts = json.loads(request.text)
     if contracts:
-        click.echo(contracts)
+        click.echo(tabulate(contracts, headers="keys"))
     else:
-        click.echo(request.text)
+        logger.error(request.text)
 
 
 @click.command()
@@ -73,9 +74,12 @@ def contract(contract_id):
     )
     contracts = json.loads(request.text)
     if contracts:
-        click.echo(contracts)
+        res = []
+        for key, val in contracts.items():
+            res.append([key, val])
+        click.echo(tabulate(res))
     else:
-        click.echo(request.text)
+        logger.error(request.text)
 
 
 @click.command()
@@ -85,9 +89,14 @@ def contract_extend(contract_id):
     request = api.request(
         component="customer", method="contract", action="extend", id=contract_id
     )
-    contracts = json.loads(request.text)
-    if contracts:
-        click.echo(contracts)
+    response = json.loads(request.text)
+    if response and "status" in response:
+        if response["status"] == "extended":
+            logger.info("Contract %s extended", contract_id)
+        elif response["status"] == "id_unauthenticated":
+            logger.error("Access denied: You are not allowed to modify %s", contract_id)
+        else:
+            logger.error(response["status"])
     else:
         click.echo(request.text)
 
@@ -106,9 +115,18 @@ def contract_autoextend(contract_id, toggle):
         id=contract_id,
         switch=switch,
     )
-    contracts = json.loads(request.text)
-    if contracts:
-        click.echo(contracts)
+    response = json.loads(request.text)
+    if response and "status" in response:
+        if response["status"] == "autoextend_disabled":
+            logger.info("autoextend has been disabled for %s", contract_id)
+        elif response["status"] == "autoextend_enabled":
+            logger.info("autoextend has been enabled for %s", contract_id)
+        elif response["status"] == "id_unauthenticated":
+            logger.error(
+                "Access denied: You are not allowed to modify contract %s", contract_id
+            )
+        else:
+            logger.error(response["status"])
     else:
         click.echo(request.text)
 
@@ -128,9 +146,12 @@ def contract_order(product):
     request = api.request(
         component="customer", method="contract", action="order", id=product
     )
-    contracts = json.loads(request.text)
-    if contracts:
-        click.echo(contracts)
+    response = json.loads(request.text)
+    if response and "status" in response:
+        if response["status"] == "order_placed":
+            logger.info("Your order has been placed as %s", response["id"])
+        else:
+            logger.error(response["status"])
     else:
         click.echo(request.text)
 

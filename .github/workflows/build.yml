@@ -1,69 +1,47 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Build
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  codequality:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Workspace
-        uses: actions/checkout@v2
-        
-      - name: Setup Python Environment
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.7
-          
-      - name: Install dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
-          
-      - name: Super-Linter
-        uses: github/super-linter@v3.14.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_PYTHON_PYLINT: true
-          
   build_linux:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Workspace
         uses: actions/checkout@v2
-        
+
       - name: Setup Python Environment
         uses: actions/setup-python@v1
         with:
           python-version: 3.7
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
+
       - name: PyInstaller Linux Build
         run: |
-          pyinstaller --onefile -y ${{ github.workspace }}/src/cbcli.py  
-      
+          pyinstaller --onefile -y ${{ github.workspace }}/src/cbcli.py
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: cbcli_linux_amd64
           path: ${{ github.workspace }}/dist/
-          
+
       - name: Automatic Releases
         uses: marvinpinto/action-automatic-releases@latest
         with:
