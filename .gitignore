@@ -6,3 +6,4 @@ config.ini
 config_*.ini
 venv/
 .vscode/
+*.code-workspace
