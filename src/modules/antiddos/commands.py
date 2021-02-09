@@ -28,32 +28,12 @@ def antiddos():
 @click.argument("toggle", type=click.BOOL)
 @click.option("-r", "--raw", is_flag=True, help="Return the raw JSON response")
 def fv3(ipv4, toggle, raw):
-    """Manage flowShieldv3 on a specified IPv4 address"""
-    try:
-        ipaddr = str(ipaddress.ip_address(ipv4))
-        request = api.request(
-            component="antiddos",
-            method="layer4",
-            action="routing",
-            routing="l4_target",
-            target=("fv3" if toggle else "fv3"),
-            ipaddr=ipaddr,
-        )
-        response = json.loads(request.text)
-        if raw:
-            click.echo(request.text)
-        else:
-            if response and response["status"] == "routing_changed":
-                logger.info("Routing changed")
-            elif response and response["status"] == "id_unauthenticated":
-                logger.error("Access denied: You are not allowed to modify %s", ipaddr)
-            else:
-                logger.error(response["status"])
-    except ValueError:
-        logger.error("address/netmask is invalid: %s", ipv4)
-    except:
-        logger.error("Usage: antiddos fv3 127.0.0.1 true")
-        raise
+    """[DEPRECATED] Manage flowShieldv3 on a specified IPv4 address"""
+    # pylint: disable=unused-argument
+    logger.warning(
+        "This command is deprecated as flowShieldv3 is already rolled out as default. No changes have been applied to the infrastructure."
+    )
+    logger.info("Routing changed")
 
 
 @click.command()
